@@ -5,7 +5,7 @@ export async function getWishlist() {
 
   // check if token is valid
   if (!token || token.trim() === "") {
-    throw new Error("No valid token found. Please login again.");
+    return null;
   }
 
   const res = await fetch("https://ecommerce.routemisr.com/api/v1/wishlist", {

@@ -17,9 +17,11 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { handleApiError } from "@/utilities/handleApiError";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const form = useForm<SigninFormValues>({
     defaultValues: {
@@ -32,32 +34,56 @@ export default function Login() {
   async function handleSignin(value: SigninFormValues) {
     let toastId: string | number | undefined;
 
+    // Clear previous manual errors
+    form.clearErrors();
+
     try {
       setLoading(true);
       toastId = toast.loading("Signing in...");
 
+      // Use redirect: false so we can inspect response and show toasts/errors
       const res = await signIn("credentials", {
         email: value?.email,
         password: value?.password,
-        redirect: true,
+        redirect: false,
         callbackUrl: "/",
       });
 
+      // If credentials provider returns an error
       if (res?.error) {
-        toast.error(res.error || "Failed to sign in", {
+        const errorMessage =
+          "Invalid email or password. Please update your email or password.";
+        form.setError("email", { type: "manual", message: errorMessage });
+        form.setError("password", { type: "manual", message: errorMessage });
+
+        toast.error(errorMessage, {
           id: toastId,
           position: "top-center",
-          duration: 3000,
+          duration: 4000,
         });
-      } else {
+        setLoading(false);
+        return;
+      }
+
+      // If signIn reports ok (success)
+      if (res?.ok) {
         toast.success("Signed in successfully", {
           id: toastId,
           position: "top-center",
-          duration: 3000,
+          duration: 2000,
         });
+        router.push("/");
+        return;
       }
+
+      // Fallback (unexpected)
+      toast.error("Unexpected error. Please try again.", {
+        id: toastId,
+        position: "top-center",
+        duration: 3000,
+      });
     } catch (err) {
-      toast.error("Something went wrong", {
+      toast.error("Something went wrong while signing in", {
         id: toastId,
         position: "top-center",
         duration: 3000,
